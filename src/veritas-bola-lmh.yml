@@ -1,0 +1,41 @@
+enable_logging: true
+log_dir: /opt/puffer/src/monitoring
+influxdb_connection:  
+  host: 127.0.0.1
+  port: 8086
+  dbname: puffer
+  user: puffer
+  password: INFLUXDB_PASSWORD
+portal_settings:
+  allowed_hosts:
+    - '*'
+  debug: true
+  secret_key: PUFFER_PORTAL_SECRET_KEY
+postgres_connection:
+  host: 127.0.0.1
+  port: 5432
+  dbname: puffer
+  user: puffer
+  password: PUFFER_PORTAL_DB_KEY
+ws_base_port: 50000
+experiments:
+  - num_servers: 1
+    fingerprint:
+      abr: bola_basic_v1
+      cc: cubic
+media_dir: /opt/puffer/media-181230
+enforce_moving_live_edge: false
+channels:
+  - cbs
+channel_configs:
+  cbs:
+    live: false
+    video:
+      1920x1080: [20]
+      640x360: [26]
+      426x240: [26]
+    audio:
+      - 128k
+      - 64k
+      - 32k
+trace: _12Mbps
