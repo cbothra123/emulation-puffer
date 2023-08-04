@@ -17,10 +17,13 @@ def parse_arguments():
     parser.add_argument("--mahimahi_dir", type=str, required=True)
     parser.add_argument("--settings_yml", type=str, required=True)
     parser.add_argument("--puffer_path", type=str, required=True)
+    parser.add_argument("--type", type=str, required=True, choices=['deployment',
+                                                                    'groundtruth', 'veritas', 'baseline'])
+
     args = parser.parse_args()
     return args
 
-def start_mahimahi_clients(p1, p2, mm_filepath):
+def start_mahimahi_clients(p1, p2, mm_filepath, puffer_path):
 
     # create a temporary directory to store Chrome sessions
     chrome_sessions = "chrome-sessions"
@@ -63,7 +66,7 @@ def start_mahimahi_clients(p1, p2, mm_filepath):
         time.sleep(4)  # don't know why but seems necessary
 
         time.sleep(play_duration + 10)
-        os.system('kill -9 $(pgrep -f {}'.format(args.puffer_path))
+        os.system('kill -9 $(pgrep -f {}'.format(puffer_path))
 
         p1.terminate()
         p2.terminate()
@@ -89,7 +92,8 @@ def main():
     mahi_mahi_files = os.listdir(args.mahimahi_dir)
 
     readme = open("readme", "a+")
-    current_time = datetime.datetime.utcnow().strftime("%a %b %d %H:%M:%S %Z %Y")
+    readme.write("#### {} ####".format(args.type))
+    current_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
     readme.write("Start: " + str(current_time) + "\n")
     readme.close()
 
@@ -97,7 +101,7 @@ def main():
 
 
         with open(args.settings_yml, 'r') as f:
-            data = yaml.safeload(f)
+            data = yaml.safe_load(f)
         f.close()
 
         data["trace"] = "_" + mahi_mahi_files[i].replace(".txt", "")
@@ -121,11 +125,12 @@ def main():
         time.sleep(5)
 
         # assume web server and media server are both running
-        start_mahimahi_clients(p1, p2, os.path.join(args.mahimahi_dir, mahi_mahi_files[i]))
+        start_mahimahi_clients(p1, p2, os.path.join(args.mahimahi_dir, mahi_mahi_files[i]), args.puffer_path)
 
     readme = open("readme", "a+")
-    current_time = datetime.datetime.utcnow().strftime("%a %b %d %H:%M:%S %Z %Y")
+    current_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
     readme.write("End: " + str(current_time) + "\n")
+    readme.write("########")
     readme.close()
 
 
