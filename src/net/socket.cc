@@ -284,6 +284,11 @@ TCPInfo TCPSocket::get_tcp_info() const
   ret.min_rtt = x.tcpi_min_rtt;
   ret.rtt = x.tcpi_rtt;
   ret.delivery_rate = x.tcpi_delivery_rate;
+  ret.last_snd = x.tcpi_last_data_sent;
+  ret.snd_ssthresh = x.tcpi_snd_ssthresh;
+  ret.rto = x.tcpi_rto;
+  ret.bytes_sent = x.tcpi_bytes_sent;
+  ret.bytes_retrans = x.tcpi_bytes_retrans;
 
   return ret;
 }

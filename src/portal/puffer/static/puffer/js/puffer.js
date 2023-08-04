@@ -8,7 +8,7 @@ const CONN_TIMEOUT = 30000; /* close the connection after 30-second timeout */
 var debug = false;
 var nonsecure = false;
 var username = '';
-var port = null;
+var port = 50001;
 var csrf_token = '';
 var video = document.getElementById('tv-video');
 
@@ -139,16 +139,6 @@ function AVSource(ws_client, server_init) {
     video.currentTime = init_seek_ts / timescale;
 
     vbuf = ms.addSourceBuffer(video_codec);
-    try {
-      abuf = ms.addSourceBuffer(audio_codec);
-    } catch(err) {
-      set_fatal_error(
-        'Error: your browser does not support the audio format, ' +
-        'Opus in WebM, used by Puffer. Please refer to the FAQ and ' +
-        'try another browser or device on which Puffer is supported.'
-      );
-      report_error(0 /* init_id is not important */, 'audio not supported');
-    }
 
     vbuf.addEventListener('updateend', function(e) {
       if (vbuf_couple.length > 0) {
@@ -190,7 +180,6 @@ function AVSource(ws_client, server_init) {
 
     /* try updating vbuf and abuf in case there are already pending chunks */
     that.vbuf_update();
-    that.abuf_update();
   }
 
   ms.addEventListener('sourceopen', function(e) {
@@ -224,7 +213,7 @@ function AVSource(ws_client, server_init) {
   });
 
   this.isOpen = function() {
-    return ms !== null && vbuf !== null && abuf !== null;
+    return ms !== null && vbuf !== null;
   };
 
   /* call "close" to garbage collect MediaSource and SourceBuffers sooner */
@@ -360,8 +349,7 @@ function AVSource(ws_client, server_init) {
   this.isRebuffering = function() {
     const tolerance = 0.1; // seconds
 
-    if (vbuf && vbuf.buffered.length === 1 &&
-        abuf && abuf.buffered.length === 1) {
+    if (vbuf && vbuf.buffered.length === 1) {
       const min_buf = Math.min(vbuf.buffered.end(0), abuf.buffered.end(0));
       if (min_buf - video.currentTime >= tolerance) {
         return false;
@@ -491,8 +479,7 @@ function WebSocketClient(session_key, username_in, settings_debug, port_in,
 
     /* skip sending client-info because vbuf.buffered.end(0) can sometimes
      * return a huge number erroneously */
-    if (av_source.getVideoBuffer() > 30 ||
-        av_source.getAudioBuffer() > 30) {
+    if (av_source.getVideoBuffer() > 30) {
       return;
     }
 
@@ -862,7 +849,6 @@ function WebSocketClient(session_key, username_in, settings_debug, port_in,
     /* periodically update vbuf and abuf in case 'updateend' is not fired */
     if (av_source) {
       av_source.vbuf_update();
-      av_source.abuf_update();
     }
   }
   setInterval(send_client_info_timer, 250);

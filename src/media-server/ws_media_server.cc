@@ -160,7 +160,7 @@ void serve_video_to_client(WebSocketServer & server,
 
   if (enable_logging) {
     string log_line = to_string(timestamp_ms()) + "," + channel->name() + ","
-      + server_id + "," + expt_id + "," + client.username() + ","
+      + server_id + "," + expt_id + "," + client.username() + "," + config["trace"].as<std::string>() + ","
       + to_string(client.first_init_id().value()) + ","
       + to_string(client.init_id().value()) + ","
       + to_string(next_vts) + ","
@@ -170,7 +170,12 @@ void serve_video_to_client(WebSocketServer & server,
       + to_string(tcpi.min_rtt) + "," + to_string(tcpi.rtt) + ","
       + to_string(tcpi.delivery_rate) + ","
       + double_to_string(client.video_playback_buf(), 3) + ","
-      + double_to_string(client.cum_rebuffer(), 3);
+      + double_to_string(client.cum_rebuffer(), 3) + ","
+      + to_string(tcpi.last_snd) + ","
+      + to_string(tcpi.rto) + ","
+      + to_string(tcpi.snd_ssthresh) + ","
+      + to_string(tcpi.bytes_sent) + ","
+      + to_string(tcpi.bytes_retrans);
     append_to_log("video_sent", log_line);
   }
 }
@@ -291,12 +296,13 @@ void serve_client(WebSocketServer & server, WebSocketClient & client)
     }
   }
 
+  /* Disabling audio
   if (client.audio_playback_buf() <= WebSocketClient::MAX_BUFFER_S and
       client.audio_in_flight().value() == 0 and channel->aready_to_serve(next_ats)
       and next_ats <= next_vts) {
     serve_audio_to_client(server, client);
   }
-
+  */
   if (client.video_playback_buf() <= WebSocketClient::MAX_BUFFER_S and
       client.video_in_flight().value() == 0 and channel->vready_to_serve(next_vts)) {
     serve_video_to_client(server, client);
@@ -460,14 +466,14 @@ void handle_client_init(WebSocketServer & server, WebSocketClient & client,
   /* record client-init */
   if (enable_logging) {
     string log_line = to_string(timestamp_ms()) + "," + msg.channel
-      + "," + server_id + ",init," + expt_id + "," + client.username() + ","
+      + "," + server_id + ",init," + expt_id + "," + client.username() + config["trace"].as<std::string>() + ","
       + to_string(client.first_init_id().value()) + ","
       + to_string(msg.init_id) + ",0,0" /* buffer cum_rebuf */;
     append_to_log("client_buffer", log_line);
 
     /* record system information */
     log_line = to_string(timestamp_ms()) + "," + server_id + ","
-      + expt_id + "," + client.username() + ","
+      + expt_id + "," + client.username() + + config["trace"].as<std::string>() + ","
       + to_string(client.first_init_id().value()) + ","
       + to_string(msg.init_id) + ","
       + client.address().ip() + ","
@@ -519,7 +525,7 @@ void handle_client_info(WebSocketClient & client, const ClientInfoMsg & msg)
     /* record system information */
     if (enable_logging) {
       string log_line = to_string(timestamp_ms()) + "," + server_id + ","
-        + expt_id + "," + client.username() + ","
+        + expt_id + "," + client.username() + config["trace"].as<std::string>() + ","
         + to_string(client.first_init_id().value()) + ","
         + to_string(msg.init_id) + ","
         + client.address().ip() + ","
@@ -537,7 +543,7 @@ void handle_client_info(WebSocketClient & client, const ClientInfoMsg & msg)
     /* record client-info */
     string log_line = to_string(timestamp_ms()) + "," + channel_name + ","
       + server_id + "," + msg.event_str + "," + expt_id + ","
-      + client.username() + ","
+      + client.username() + config["trace"].as<std::string>() + ","
       + to_string(client.first_init_id().value()) + ","
       + to_string(msg.init_id) + ","
       + double_to_string(msg.video_buffer, 3) + ","
@@ -594,7 +600,7 @@ void handle_client_video_ack(WebSocketClient & client,
   /* record client's received video */
   if (enable_logging) {
     string log_line = to_string(timestamp_ms()) + "," + msg.channel + ","
-      + server_id + "," + expt_id + "," + client.username() + ","
+      + server_id + "," + expt_id + "," + client.username() + config["trace"].as<std::string>() + ","
       + to_string(client.first_init_id().value()) + ","
       + to_string(msg.init_id) + ","
       + to_string(msg.timestamp) + ","
@@ -749,30 +755,26 @@ int run_websocket_server(pqxx::nontransaction & db_work)
         if (msg_parser.msg_type() == ClientMsgParser::Type::Init) {
           ClientInitMsg msg = msg_parser.parse_client_init();
 
-          /* authenticate user */
-          if (not client.is_authenticated()) {
-            if (auth_client(msg.session_key, db_work)) {
-              client.set_authenticated(true);
+          /* disable authenticate user */
+          client.set_authenticated(true);
+          client.set_session_key(msg.session_key);
+          client.set_username(msg.username);
+          client.set_address(server.peer_addr(connection_id));
 
-              /* set client's username and IP */
-              client.set_session_key(msg.session_key);
-              client.set_username(msg.username);
-              client.set_address(server.peer_addr(connection_id));
+          /* set client's username and IP */
+          client.set_session_key(msg.session_key);
+          client.set_username(msg.username);
+          client.set_address(server.peer_addr(connection_id));
 
-              /* set client's system info (OS, browser and screen size) */
-              client.set_os(msg.os);
-              client.set_browser(msg.browser);
-              client.set_screen_size(msg.screen_width, msg.screen_height);
+          /* set client's system info (OS, browser and screen size) */
+          client.set_os(msg.os);
+          client.set_browser(msg.browser);
+          client.set_screen_size(msg.screen_width, msg.screen_height);
 
-              cerr << connection_id << ": authentication succeeded" << endl;
-              cerr << client.signature() << ": " << client.browser() << " on "
-                   << client.os() << ", " << client.address().str() << endl;
-            } else {
-              cerr << connection_id << ": authentication failed" << endl;
-              server.close_connection(connection_id);
-              return;
-            }
-          }
+          cerr << connection_id << ": authentication succeeded" << endl;
+          cerr << client.signature() << ": " << client.browser() << " on "
+               << client.os() << ", " << client.address().str() << endl;
+
 
           /* handle client-init and initialize client's channel */
           handle_client_init(server, client, msg);

@@ -41,9 +41,10 @@ def results(request, input_date=''):
     return render(request, 'puffer/results.html', context)
 
 
-@login_required(login_url='/accounts/login/')
+# @login_required(login_url='/accounts/login/')
 def player(request):
     # generate a random port or use a superuser-specified port
+    """
     port = None
     if request.user.is_superuser:
         port = request.GET.get('port', None)
@@ -58,6 +59,9 @@ def player(request):
               'username': request.user.username,
               'debug': settings.DEBUG,
               'port': port}
+    context = {'params_json': json.dumps(params)}
+    """
+    params = {'session_key': 'fake', 'username': 'fake', 'debug': settings.DEBUG}
     context = {'params_json': json.dumps(params)}
 
     return render(request, 'puffer/player.html', context)
