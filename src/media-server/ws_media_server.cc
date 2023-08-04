@@ -473,7 +473,7 @@ void handle_client_init(WebSocketServer & server, WebSocketClient & client,
 
     /* record system information */
     log_line = to_string(timestamp_ms()) + "," + server_id + ","
-      + expt_id + "," + client.username() + + config["trace"].as<std::string>() + ","
+      + expt_id + "," + client.username() + config["trace"].as<std::string>() + ","
       + to_string(client.first_init_id().value()) + ","
       + to_string(msg.init_id) + ","
       + client.address().ip() + ","
