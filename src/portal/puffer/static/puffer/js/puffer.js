@@ -159,25 +159,6 @@ function AVSource(ws_client, server_init) {
       console.log('video source buffer abort:', e);
     });
 
-    abuf.addEventListener('updateend', function(e) {
-      if (abuf_couple.length > 0) {
-        var data_to_ack = abuf_couple.shift();
-        /* send the last ack here after buffer length is updated */
-        ws_client.send_client_ack('client-audack', data_to_ack);
-      }
-
-      that.abuf_update();
-    });
-
-    abuf.addEventListener('error', function(e) {
-      console.log('audio source buffer error:', e);
-      that.close();
-    });
-
-    abuf.addEventListener('abort', function(e) {
-      console.log('audio source buffer abort:', e);
-    });
-
     /* try updating vbuf and abuf in case there are already pending chunks */
     that.vbuf_update();
   }
@@ -350,7 +331,7 @@ function AVSource(ws_client, server_init) {
     const tolerance = 0.1; // seconds
 
     if (vbuf && vbuf.buffered.length === 1) {
-      const min_buf = Math.min(vbuf.buffered.end(0), abuf.buffered.end(0));
+      const min_buf = Math.min(vbuf.buffered.end(0));
       if (min_buf - video.currentTime >= tolerance) {
         return false;
       }
