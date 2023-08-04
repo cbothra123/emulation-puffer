@@ -8,4 +8,4 @@ More details can be found
 on the [website](https://puffer.stanford.edu/faq/),
 in our [research paper](https://www.usenix.org/conference/nsdi20/presentation/yan)
 (*Community Award* winner at NSDI 2020),
-and in the [documentation](wiki/Documentation.md).
+and in the [documentation](https://github.com/StanfordSNR/puffer/wiki/Documentation).
