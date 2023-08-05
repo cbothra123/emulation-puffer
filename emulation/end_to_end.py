@@ -16,14 +16,13 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("--mahimahi_dir", type=str, required=True)
     parser.add_argument("--settings_yml", type=str, required=True)
-    parser.add_argument("--puffer_path", type=str, required=True)
     parser.add_argument("--type", type=str, required=True, choices=['deployment',
                                                                     'groundtruth', 'veritas', 'baseline'])
 
     args = parser.parse_args()
     return args
 
-def start_mahimahi_clients(p1, p2, mm_filepath, puffer_path):
+def start_mahimahi_clients(p1, p2, mm_filepath):
 
     # create a temporary directory to store Chrome sessions
     chrome_sessions = "chrome-sessions"
@@ -66,7 +65,6 @@ def start_mahimahi_clients(p1, p2, mm_filepath, puffer_path):
         time.sleep(4)  # don't know why but seems necessary
 
         time.sleep(play_duration + 10)
-        os.system('kill -9 $(pgrep -f {}'.format(puffer_path))
 
         p1.terminate()
         p2.terminate()
@@ -92,7 +90,7 @@ def main():
     mahi_mahi_files = os.listdir(args.mahimahi_dir)
 
     readme = open("readme", "a+")
-    readme.write("#### {} ####".format(args.type))
+    readme.write("#### {} #### \n".format(args.type))
     current_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
     readme.write("Start: " + str(current_time) + "\n")
     readme.close()
@@ -111,26 +109,27 @@ def main():
         server_cmd = "sudo sysctl -w net.ipv4.tcp_slow_start_after_idle=0; " \
                      "sysctl net.ipv4.tcp_slow_start_after_idle;" \
                      "sudo sysctl -w  net.ipv4.tcp_no_metrics_save=1; " \
-                     "{}/src/portal/manage.py runserver 0:8080".format(args.puffer_path)
+                     "/opt/puffer/src/portal/manage.py runserver 0:8080"
 
         p1 = Popen(server_cmd.encode('utf-8'), shell=True, preexec_fn=os.setsid)
         time.sleep(5)
         media_server_cmd = "sudo sysctl -w net.ipv4.tcp_slow_start_after_idle=0; " \
                            "sysctl net.ipv4.tcp_slow_start_after_idle;" \
                            "sudo sysctl -w net.ipv4.tcp_no_metrics_save=1; " \
-                           "{}/src/media-server/run_servers {}/src/".format(args.puffer_path, args.puffer_path) \
+                           "/opt/puffer/src/media-server/run_servers /opt/puffer/src/" \
                            + args.settings_yml
 
         p2 = Popen(media_server_cmd.encode('utf-8'), shell=True, preexec_fn=os.setsid)
         time.sleep(5)
 
         # assume web server and media server are both running
-        start_mahimahi_clients(p1, p2, os.path.join(args.mahimahi_dir, mahi_mahi_files[i]), args.puffer_path)
+        start_mahimahi_clients(p1, p2, os.path.join(args.mahimahi_dir, mahi_mahi_files[i]))
+        os.system('kill -9 $(pgrep -f /opt/puffer/)')
 
     readme = open("readme", "a+")
     current_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
     readme.write("End: " + str(current_time) + "\n")
-    readme.write("########")
+    readme.write("######## \n")
     readme.close()
 
 

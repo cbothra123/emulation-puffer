@@ -160,7 +160,7 @@ void serve_video_to_client(WebSocketServer & server,
 
   if (enable_logging) {
     string log_line = to_string(timestamp_ms()) + "," + channel->name() + ","
-      + server_id + "," + expt_id + "," + client.username() + "," + config["trace"].as<std::string>() + ","
+      + server_id + "," + expt_id + "," + client.username() + config["trace"].as<std::string>() + ","
       + to_string(client.first_init_id().value()) + ","
       + to_string(client.init_id().value()) + ","
       + to_string(next_vts) + ","

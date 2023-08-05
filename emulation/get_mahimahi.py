@@ -27,9 +27,8 @@ def main():
 	hosts = os.listdir(args.baseline_dir)
 
 	for host in hosts:
-		os.mkdir(args.mahimahi_dir + '/' + host)
 		DATA_PATH = os.path.join(args.baseline_dir, host)
-		OUTPUT_PATH = os.path.join(args.mahimahi_dir, host)
+		OUTPUT_PATH = os.path.join(args.mahimahi_dir)
 
 		files = os.listdir(DATA_PATH)
 		
