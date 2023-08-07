@@ -4,16 +4,15 @@ import argparse
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--baseline_dir", type=str, required=True)   
-    parser.add_argument("--mahimahi_dir", type=str, required=True)   
+    parser.add_argument("experiment", type=str)     	
+    parser.add_argument("baseline_dir", type=str)   
     args = parser.parse_args()
+    args.mahimahi_dir = os.path.join(args.experiment, "mm-baseline")
     return args
 
 BYTES_PER_PKT = 1500.0
 MILLISEC_IN_SEC = 1000.0
 BITS_IN_BYTE = 8.0
-
-LINES = 420
 
 def main():
 

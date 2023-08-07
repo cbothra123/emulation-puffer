@@ -6,9 +6,10 @@ import argparse
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--video_sessions_dir", type=str, required=True)   
-    parser.add_argument("--baseline_dir", type=str, required=True)   
+    parser.add_argument("experiment", type=str)   
+    parser.add_argument("video_sessions_dir")   
     args = parser.parse_args()
+    args.baseline_dir = os.path.join(args.experiment, 'baseline')
     return args
 
 def cluster_parser(trace_name, output_name):

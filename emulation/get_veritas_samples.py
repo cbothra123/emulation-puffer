@@ -4,12 +4,14 @@ import argparse
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
+
+    parser.add_argument("experiment", type=str) 
     parser.add_argument("--veritas_transform_dir", type=str, required=True) 
-    parser.add_argument("--veritas_samples_dir", type=str, required=True)   
     parser.add_argument("--transition_time_step", type=int, required=True)   
     parser.add_argument("--emulation_session_len", type=float, default=350.0)   
     
     args = parser.parse_args()
+    args.veritas_samples_dir = os.path.join(args.experiment, 'veritas-samples')
     return args
 
 def main():

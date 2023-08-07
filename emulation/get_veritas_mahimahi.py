@@ -9,11 +9,12 @@ BITS_IN_BYTE = 8.0
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--veritas_samples_dir", type=str, required=True)   
-    parser.add_argument("--transition_time_step", type=int, required=True, help="in seconds")   
-    parser.add_argument("--veritas_mahimahi_dir", type=str)   
+    parser.add_argument("experiment", type=str) 
+    parser.add_argument("veritas_samples_dir", type=str)   
+    parser.add_argument("transition_time_step", type=int, help="in seconds")   
     
     args = parser.parse_args()
+    args.veritas_mahimahi_dir = os.path.join(args.experiment, "mm-veritas")
     return args
 
 def main():

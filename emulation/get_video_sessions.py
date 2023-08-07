@@ -6,8 +6,9 @@ from influx_client import parser_influx
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--host", type=str, required=True)
-    parser.add_argument("--exp", type=str, required=True)
+    parser.add_argument("experiment", type=str)
+    parser.add_argument("type", type=str)    
+    parser.add_argument("host", type=str)
     parser.add_argument("--start_time",
                         help='datetime in UTC conforming to RFC3339, Ex: 2023-02-14T06:35:00Z')
     parser.add_argument("--end_time",
@@ -18,9 +19,11 @@ def parse_arguments():
         if not args.start_time or not args.end_time:
             print("Need to pass start time and end time.")
     else:
-        d = open('readme', 'r').readlines()
-        args.start_time = d[-3].split(": ")[1]
-        args.end_time = d[-2].split(": ")[1]
+        d = open(args.experiment + '/readme', 'r').readlines()
+        args.start_time = d[-3].split(": ")[1].split(".")[0] + 'Z'
+        args.end_time = d[-2].split(": ")[1].split(".")[0] + 'Z'
+    
+    args.exp = os.path.join(args.experiment, args.type)
     return args
 
 def main():

@@ -1,18 +1,34 @@
 import os
 import numpy as np
 import sys
+import argparse
 
-IN_FILE = './' + sys.argv[1]+ '/'
-OUT_FILE = './' + sys.argv[2] + '/'
+
 FILE_SIZE = 200
 BYTES_PER_PKT = 1500.0
 MILLISEC_IN_SEC = 1000.0
 EXP_LEN = 5000.0  # millisecond
 
-if not os.path.exists(sys.argv[2]):
-    os.mkdir(sys.argv[2])
+def parse_arguments():
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input", type=str)
+    parser.add_argument("output", type=str)    
+
+    args = parser.parse_args()
+
+    return args
 
 def main():
+
+	args = parse_arguments()
+
+	IN_FILE = args.input + '/'
+	OUT_FILE = args.output + '/'
+
+	if not os.path.isdir(OUT_FILE):
+		os.mkdir(OUT_FILE)
+		
 	files = os.listdir(IN_FILE)
 	for trace_file in files:
 		if os.stat(IN_FILE + trace_file).st_size >= FILE_SIZE:

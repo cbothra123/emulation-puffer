@@ -5,10 +5,11 @@ import argparse
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--video_sessions_dir", type=str, required=True) 
-    parser.add_argument("--fcc_cooked", type=str, required=True)   
-    parser.add_argument("--veritas_dir", type=str, required=True)   
+    parser.add_argument("experiment", type=str)    
+    parser.add_argument("fcc_cooked", type=str)   
+    parser.add_argument("video_sessions_dir", type=str) 
     args = parser.parse_args()
+    args.veritas_dir = os.path.join(args.experiment, "veritas")
     return args
 
 def main():

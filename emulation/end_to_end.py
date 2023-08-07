@@ -14,9 +14,10 @@ import yaml
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mahimahi_dir", type=str, required=True)
-    parser.add_argument("--settings_yml", type=str, required=True)
-    parser.add_argument("--type", type=str, required=True, choices=['deployment',
+    parser.add_argument("experiment", type=str)
+    parser.add_argument("mahimahi_dir", type=str)
+    parser.add_argument("settings_yml", type=str)
+    parser.add_argument("type", type=str, choices=['deployment',
                                                                     'groundtruth', 'veritas', 'baseline'])
 
     args = parser.parse_args()
@@ -89,7 +90,7 @@ def main():
 
     mahi_mahi_files = os.listdir(args.mahimahi_dir)
 
-    readme = open("readme", "a+")
+    readme = open(args.experiment + "/readme", "a+")
     readme.write("#### {} #### \n".format(args.type))
     current_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
     readme.write("Start: " + str(current_time) + "\n")
@@ -125,8 +126,9 @@ def main():
         # assume web server and media server are both running
         start_mahimahi_clients(p1, p2, os.path.join(args.mahimahi_dir, mahi_mahi_files[i]))
         os.system('kill -9 $(pgrep -f /opt/puffer/)')
+        os.system('kill -9 $(pgrep -f /opt/google/)')
 
-    readme = open("readme", "a+")
+    readme = open(args.experiment + "/readme", "a+")
     current_time = datetime.datetime.now(datetime.timezone.utc).isoformat()
     readme.write("End: " + str(current_time) + "\n")
     readme.write("######## \n")
@@ -135,5 +137,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 

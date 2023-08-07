@@ -1,12 +1,13 @@
 import os
-from subprocess import PIPE, run
+from subprocess import PIPE, run, check_output
 import ast
 import json
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+import argparse
+import pandas as pd
 
-from quality import get_the_graphs
 
 plt.rcParams.update({
     "text.usetex": True,
@@ -46,18 +47,39 @@ linestyles = {
     'groundtruth': ('solid', 'solid'),
 }
 
-config = {
-            
-    'bba-low-to-high-1-5-v10': {
-        'deployment': (['hp024.utah.cloudlab.us'],
-                       '2023-08-01T22:54:30Z', '2023-08-02T01:20:00Z'),
-        'baseline': (['hp024.utah.cloudlab.us'],
-                        '2023-08-02T01:21:00Z', '2023-08-02T03:41:00Z'),
-        'veritas': (['hp024.utah.cloudlab.us'],
-                        '2023-08-02T03:53:00Z', '2023-08-02T10:51:00Z'),
-        'status': 'Not Done'
-    },
-}
+def parse_arguments():
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("experiment", type=str)    
+
+    args = parser.parse_args()
+    args.readme = os.path.join(args.experiment, "readme")
+    return args
+
+def get_config(readme):
+    output = {}
+    lines = open(readme, 'r').readlines()
+    print(lines)
+    for l in range(0, len(lines)):
+        if 'deployment' in lines[l]:
+            start_time = lines[l+1].split(": ")[1].split(".")[0] + 'Z'
+            end_time = lines[l+2].split(": ")[1].split(".")[0] + 'Z'
+            output['deployment'] = (['locahost'], start_time, end_time)
+        if 'baseline' in lines[l]:
+            start_time = lines[l+1].split(": ")[1].split(".")[0] + 'Z'
+            end_time = lines[l+2].split(": ")[1].split(".")[0] + 'Z'
+            output['baseline'] = (['locahost'], start_time, end_time)
+
+        if 'groundtruth' in lines[l]:
+            start_time = lines[l+1].split(": ")[1].split(".")[0] + 'Z'
+            end_time = lines[l+2].split(": ")[1].split(".")[0] + 'Z'
+            output['groundtruth'] = (['locahost'], start_time, end_time)
+        if 'veritas' in lines[l]:
+            start_time = lines[l+1].split(": ")[1].split(".")[0] + 'Z'
+            end_time = lines[l+2].split(": ")[1].split(".")[0] + 'Z'
+            output['veritas'] = (['locahost'], start_time, end_time)
+    print(output)
+    return output
 
 def get_metrics(data, experiment, step):
     results = {}
@@ -65,27 +87,23 @@ def get_metrics(data, experiment, step):
     start_time = data[1]
     end_time = data[2]
     
-    # ssh cbothra@hp025.utah.cloudlab.us  
-    # python3 /users/cbothra/updated-qoe-scripts/coefficient_updated_plot_ssim.py 
-    # --from 2023-01-10T15:35:00Z --to 2023-01-10T18:30:00Z -o random.png /opt/puffer/src/mpc_settings.yml
-    
     for host in hosts:
-        cmd = "ssh cbothra@{} python3 /users/cbothra/updated-qoe-scripts/coefficient_updated_plot_ssim.py --from {} --to {} -o random.png /opt/puffer/src/mpc_settings.yml".format(host, start_time, end_time)
+        cmd = "python3 /opt/puffer/src/scripts/plot_ssim_rebuffer.py --from {} --to {} -o random.png /opt/puffer/src/veritas-highest.yml".format(start_time, end_time)
         
         try: 
             path = experiment + '/step-' + str(step) + '-' + host + '.json'
-            print(path)
             if os.path.isfile(path):
                 raw_result = open(path, 'r').read()
                 result = raw_result.split('\\n')
             else:   
-                raw_result = ((run(cmd, stdout=PIPE, stderr=PIPE, universal_newlines=True, shell=True)).stdout)
+                raw_result = run(cmd, shell=True, capture_output=True).stdout.decode('utf-8')
+                print(raw_result)
                 save_step_to_file(experiment, host, step, raw_result)
                 result = raw_result.split('\n')
-            if result[2] != 'Missed':
-                results[host] = ast.literal_eval(result[2].split('QoE:  ')[1])
+            if result[1] != 'Missed':
+                results[host] = ast.literal_eval(result[1].split('QoE:  ')[1])
             else:
-                results[host] = ast.literal_eval(result[3].split('QoE:  ')[1])
+                results[host] = ast.literal_eval(result[2].split('QoE:  ')[1])
         except Exception as e:
             print(e, cmd)
             continue
@@ -164,28 +182,30 @@ def get_stats(method, feature, input):
             np.percentile(input, 5), np.percentile(input, 25), 
             np.percentile(input, 75), np.percentile(input, 95), np.percentile(input, 99)))
 
-for experiment in config:
+
+def main():
     
-    if config[experiment]['status'] == 'Done':
-        continue
-    
+    args = parse_arguments()
+
+    experiment = args.experiment
     print(experiment)
+
+    config = get_config(args.readme)
+
     if not os.path.isdir(experiment):
         os.mkdir(experiment)
 
-    
-    # groundtruth_ssim, groundtruth_rebuf, \
-    #     groundtruth_summary_ssim, groundtruth_summary_rebuf, \
-    #         groundtruth_total = get_cumulative(get_metrics(config[experiment]['groundtruth'], experiment, 3), experiment, 'gt')
+    groundtruth_ssim, groundtruth_rebuf, \
+        groundtruth_summary_ssim, groundtruth_summary_rebuf, \
+            groundtruth_total = get_cumulative(get_metrics(config['groundtruth'], experiment, 3), experiment, 'gt')
     
     veritas_ssim, veritas_rebuf, \
         veritas_summary_ssim, veritas_summary_rebuf, \
-            veritas_total, consverative_ssim, consverative_rebuf = get_cumulative(get_metrics(config[experiment]['veritas'], experiment, 4), experiment, 'veritas')
+            veritas_total, consverative_ssim, consverative_rebuf = get_cumulative(get_metrics(config['veritas'], experiment, 4), experiment, 'veritas')
            
     baseline_ssim, baseline_rebuf, \
         baseline_summary_ssim, baseline_summary_rebuf, \
-            baseline_total =  get_cumulative(get_metrics(config[experiment]['baseline'], experiment, 2), experiment, 'baseline')
-    
+            baseline_total =  get_cumulative(get_metrics(config['baseline'], experiment, 2), experiment, 'baseline')
     
     def convert_to_db(data):
         results = []
@@ -193,33 +213,35 @@ for experiment in config:
             results.append(-10 * np.log10(1-i))
         return results
 
-    # groundtruth_ssim = convert_to_db(groundtruth_ssim)
+    groundtruth_ssim = convert_to_db(groundtruth_ssim)
     veritas_ssim = convert_to_db(veritas_ssim)
     baseline_ssim = convert_to_db(baseline_ssim)
     consverative_ssim = convert_to_db(consverative_ssim)
-    
-    # sns.ecdfplot(groundtruth_ssim, label='Ground Truth', color=colors['groundtruth'], linestyle=linestyles['groundtruth'][1])
+    print(groundtruth_ssim, veritas_ssim, baseline_ssim)
+    sns.ecdfplot(groundtruth_ssim, label='Ground Truth', color=colors['groundtruth'], linestyle=linestyles['groundtruth'][1])
     sns.ecdfplot(veritas_ssim, label='Veritas', color=colors['veritas'], linestyle=linestyles['veritas'][1])
     sns.ecdfplot(baseline_ssim, label='Baseline', color=colors['baseline'], linestyle=linestyles['baseline'][1])
 
-    # get_stats("Groundtruth", 'ssim', groundtruth_ssim)
+    get_stats("Groundtruth", 'ssim', groundtruth_ssim)
     get_stats("Veritas", 'ssim', veritas_ssim)
     get_stats("Baseline", 'ssim', baseline_ssim)
-    
     
     plt.tight_layout()
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
 
+    plt.ticklabel_format(style="plain", useOffset=False)
+
     plt.xlabel('SSIM (dB)')
     plt.ylabel('Proportion of sessions')
-    plt.savefig(experiment + '-overall_cdf_ssim.pdf', format='pdf', bbox_inches="tight")
+    plt.savefig(experiment + '/overall_cdf_ssim.pdf', format='pdf', bbox_inches="tight")
     plt.close()
+    exit()
     
-    # sns.ecdfplot(groundtruth_rebuf, label='Ground Truth', color=colors['groundtruth'], linestyle=linestyles['groundtruth'][1])
+    sns.ecdfplot(groundtruth_rebuf, label='Ground Truth', color=colors['groundtruth'], linestyle=linestyles['groundtruth'][1])
     sns.ecdfplot(veritas_rebuf, label='Veritas', color=colors['veritas'], linestyle=linestyles['veritas'][1])
     sns.ecdfplot(baseline_rebuf, label='Baseline', color=colors['baseline'], linestyle=linestyles['baseline'][1])
 
-    # get_stats("Groundtruth", 'rebuf', groundtruth_rebuf)
+    get_stats("Groundtruth", 'rebuf', groundtruth_rebuf)
     get_stats("Veritas", 'rebuf', veritas_rebuf)
     get_stats("Baseline", 'rebuf', baseline_rebuf)
         
@@ -228,6 +250,8 @@ for experiment in config:
 
     plt.xlabel('Rebuf ratio')
     plt.ylabel('Proportion of sessions')
-    plt.savefig(experiment + '-overall_cdf_rebuf_ratio.pdf', format='pdf', bbox_inches="tight")
+    plt.savefig(experiment + '/overall_cdf_rebuf_ratio.pdf', format='pdf', bbox_inches="tight")
     plt.close()
     
+if __name__ == "__main__":
+	main()
